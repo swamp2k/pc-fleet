@@ -1,0 +1,12 @@
+{
+  "name": "pcfleet-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-01-01",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "workstationwatch",
+      "database_id": "ff783fa5-4062-418b-88e7-2bb33ba2d5be"
+    }
+  ]
+}
