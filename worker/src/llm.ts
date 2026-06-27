@@ -61,7 +61,7 @@ function formatPrompt(input: PromptInput): string {
   if (hw) {
     const gpus = hw.gpu_json ? JSON.parse(hw.gpu_json as string) : [];
     const gpuStr = Array.isArray(gpus) && gpus.length
-      ? gpus.map((g: Record<string, unknown>) => g.name ?? JSON.stringify(g)).join(', ')
+      ? gpus.map((g: Record<string, unknown>) => g.model ?? JSON.stringify(g)).join(', ')
       : 'none reported';
     sections.push(`
 ## Hardware (as of ${hw.collected_at ?? 'unknown'})

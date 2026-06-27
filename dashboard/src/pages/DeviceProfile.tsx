@@ -59,7 +59,7 @@ export default function DeviceProfile() {
   if (error) return <div style={{ padding: '1.5rem', color: 'red' }}>Error: {error}</div>;
   if (!device) return <div style={{ padding: '1.5rem' }}>Loading…</div>;
 
-  const gpus: Array<{ name?: string }> = (() => {
+  const gpus: Array<{ model?: string; vram_mb?: number }> = (() => {
     try { return hardware?.gpu_json ? JSON.parse(hardware.gpu_json) : []; }
     catch { return []; }
   })();
@@ -79,7 +79,7 @@ export default function DeviceProfile() {
           <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.25rem 1rem', margin: 0 }}>
             <dt>CPU</dt><dd style={{ margin: 0 }}>{hardware.cpu_model ?? '—'} ({hardware.cpu_cores ?? '?'} cores)</dd>
             <dt>RAM</dt><dd style={{ margin: 0 }}>{hardware.ram_total_gb != null ? `${hardware.ram_total_gb} GB` : '—'}</dd>
-            <dt>GPU</dt><dd style={{ margin: 0 }}>{gpus.length ? gpus.map(g => g.name ?? 'unknown').join(', ') : '—'}</dd>
+            <dt>GPU</dt><dd style={{ margin: 0 }}>{gpus.length ? gpus.map(g => g.model ?? 'unknown').join(', ') : '—'}</dd>
             <dt>Motherboard</dt><dd style={{ margin: 0 }}>{hardware.motherboard_model ?? '—'}</dd>
           </dl>
         </section>
