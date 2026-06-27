@@ -34,7 +34,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm ci
+      - run: npm install
       - run: npx tsc --noEmit
       - run: npx wrangler deploy
         env:
@@ -53,7 +53,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm ci
+      - run: npm install
       - run: npx tsc --noEmit
       - run: npm run build
         env:
