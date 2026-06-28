@@ -5,6 +5,15 @@ import { getProfile, upsertProfile, getHardware, type Device, type UserProfile, 
 const PERF_OPTIONS = ['light', 'everyday', 'gaming', 'creative-pro'] as const;
 const USE_CASE_SUGGESTIONS = ['gaming', 'video-editing', 'office', 'browsing', 'development', 'school', 'streaming'];
 
+function HwRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '3px 0' }}>
+      <span style={{ color: 'var(--text-faint)' }}>{label}</span>
+      <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{value}</span>
+    </div>
+  );
+}
+
 export default function DeviceProfile() {
   const { id } = useParams<{ id: string }>();
   const [device, setDevice] = useState<Device | null>(null);
@@ -56,8 +65,19 @@ export default function DeviceProfile() {
     }
   }
 
-  if (error) return <div style={{ padding: '1.5rem', color: 'red' }}>Error: {error}</div>;
-  if (!device) return <div style={{ padding: '1.5rem' }}>Loading…</div>;
+  if (error) return (
+    <div style={{ padding: '32px 40px' }}>
+      <div style={{ background: 'var(--danger-dim)', border: '1px solid var(--danger)', borderRadius: 'var(--radius)', padding: '12px 16px', color: 'var(--text)', fontSize: 13 }}>
+        Error: {error}
+      </div>
+    </div>
+  );
+
+  if (!device) return (
+    <div style={{ padding: '32px 40px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 13 }}>
+      Loading…
+    </div>
+  );
 
   const gpus: Array<{ model?: string; vram_mb?: number }> = (() => {
     try { return hardware?.gpu_json ? JSON.parse(hardware.gpu_json) : []; }
@@ -65,76 +85,130 @@ export default function DeviceProfile() {
   })();
 
   return (
-    <div style={{ padding: '1.5rem', maxWidth: 700 }}>
-      <div style={{ marginBottom: '1rem' }}>
-        <Link to="/devices">← All devices</Link>
+    <div style={{ padding: '32px 40px', maxWidth: 700 }}>
+      <div style={{ marginBottom: 20 }}>
+        <Link to="/devices" style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-muted)' }}>
+          ← All devices
+        </Link>
       </div>
 
-      <h2>{device.name}{device.owner ? ` — ${device.owner}` : ''}</h2>
+      <div style={{ marginBottom: 28 }}>
+        <div className="eyebrow" style={{ marginBottom: 6 }}>Device</div>
+        <h1 style={{ fontFamily: 'var(--font-mono)', fontSize: 22, margin: 0, fontWeight: 600 }}>
+          {device.name}{device.owner ? ` — ${device.owner}` : ''}
+        </h1>
+      </div>
 
-      {/* pcwatch hardware (read-only) */}
       {hardware ? (
-        <section style={{ background: '#f9f9f9', padding: '1rem', borderRadius: 6, marginBottom: '1.5rem' }}>
-          <h3 style={{ marginTop: 0 }}>Hardware (from pcwatch)</h3>
-          <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.25rem 1rem', margin: 0 }}>
-            <dt>CPU</dt><dd style={{ margin: 0 }}>{hardware.cpu_model ?? '—'} ({hardware.cpu_cores ?? '?'} cores)</dd>
-            <dt>RAM</dt><dd style={{ margin: 0 }}>{hardware.ram_total_gb != null ? `${hardware.ram_total_gb} GB` : '—'}</dd>
-            <dt>GPU</dt><dd style={{ margin: 0 }}>{gpus.length ? gpus.map(g => g.model ?? 'unknown').join(', ') : '—'}</dd>
-            <dt>Motherboard</dt><dd style={{ margin: 0 }}>{hardware.motherboard_model ?? '—'}</dd>
-          </dl>
+        <section style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 16, marginBottom: 24 }}>
+          <div className="eyebrow" style={{ marginBottom: 12 }}>Hardware (from pcwatch)</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <HwRow label="CPU" value={`${hardware.cpu_model ?? '—'} (${hardware.cpu_cores ?? '?'} cores)`} />
+            <HwRow label="RAM" value={hardware.ram_total_gb != null ? `${hardware.ram_total_gb} GB` : '—'} />
+            <HwRow label="GPU" value={gpus.length ? gpus.map(g => g.model ?? 'unknown').join(', ') : '—'} />
+            <HwRow label="Motherboard" value={hardware.motherboard_model ?? '—'} />
+          </div>
         </section>
       ) : (
-        <p style={{ fontStyle: 'italic', color: '#888', marginBottom: '1.5rem' }}>No hardware inventory collected yet.</p>
+        <p style={{ fontStyle: 'italic', color: 'var(--text-faint)', marginBottom: 24, fontSize: 13 }}>
+          No hardware inventory collected yet.
+        </p>
       )}
 
-      {/* pcwatch notes (read-only) */}
       {device.notes && (
-        <section style={{ marginBottom: '1.5rem' }}>
-          <strong>Admin notes (pcwatch):</strong>
-          <p style={{ margin: '0.25rem 0 0', color: '#555' }}>{device.notes}</p>
+        <section style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 16, marginBottom: 24 }}>
+          <div className="eyebrow" style={{ marginBottom: 8 }}>Admin notes (pcwatch)</div>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>{device.notes}</p>
         </section>
       )}
 
-      {/* fleet profile (editable) */}
-      <form onSubmit={handleSave}>
-        <h3>Fleet Profile</h3>
+      <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
+          <div className="eyebrow" style={{ marginBottom: 16 }}>Fleet Profile</div>
 
-        <fieldset style={{ border: 'none', padding: 0, marginBottom: '1rem' }}>
-          <legend style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Primary use cases</legend>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            {USE_CASE_SUGGESTIONS.map(tag => (
-              <label key={tag} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}>
-                <input type="checkbox" checked={useCases.includes(tag)} onChange={() => toggleUseCase(tag)} />
-                {tag}
-              </label>
-            ))}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 10 }}>
+              Primary use cases
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {USE_CASE_SUGGESTIONS.map(tag => (
+                <label key={tag} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: useCases.includes(tag) ? 'var(--text)' : 'var(--text-muted)' }}>
+                  <input
+                    type="checkbox"
+                    checked={useCases.includes(tag)}
+                    onChange={() => toggleUseCase(tag)}
+                    style={{ accentColor: 'var(--accent)' }}
+                  />
+                  {tag}
+                </label>
+              ))}
+            </div>
           </div>
-        </fieldset>
 
-        <label style={{ display: 'block', marginBottom: '1rem' }}>
-          <span style={{ fontWeight: 600 }}>Performance expectation</span>
-          <select value={perfExpectation} onChange={e => setPerfExpectation(e.target.value)}
-            style={{ display: 'block', marginTop: '0.25rem', width: '100%' }}>
-            <option value="">— not set —</option>
-            {PERF_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-          </select>
-        </label>
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>
+              Performance expectation
+            </div>
+            <select
+              value={perfExpectation}
+              onChange={e => setPerfExpectation(e.target.value)}
+              style={{
+                display: 'block',
+                width: '100%',
+                background: 'var(--panel-raised)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius)',
+                color: 'var(--text)',
+                padding: '9px 12px',
+                fontFamily: 'var(--font-body)',
+                fontSize: 14,
+              }}
+            >
+              <option value="">— not set —</option>
+              {PERF_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+            </select>
+          </div>
 
-        <label style={{ display: 'block', marginBottom: '1.25rem' }}>
-          <span style={{ fontWeight: 600 }}>Usage notes</span>
-          <textarea value={usageNotes} onChange={e => setUsageNotes(e.target.value)} rows={3}
-            placeholder="Anything else the AI advisor should know about how this machine is used…"
-            style={{ display: 'block', marginTop: '0.25rem', width: '100%', boxSizing: 'border-box' }} />
-        </label>
+          <div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>
+              Usage notes
+            </div>
+            <textarea
+              value={usageNotes}
+              onChange={e => setUsageNotes(e.target.value)}
+              rows={4}
+              placeholder="Anything else the AI advisor should know about how this machine is used…"
+              style={{
+                display: 'block',
+                width: '100%',
+                boxSizing: 'border-box',
+                background: 'var(--panel-raised)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius)',
+                color: 'var(--text)',
+                padding: '9px 12px',
+                fontFamily: 'var(--font-body)',
+                fontSize: 14,
+                resize: 'vertical',
+              }}
+            />
+          </div>
+        </div>
 
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        <button type="submit" disabled={saving}>
-          {saving ? 'Saving…' : saved ? 'Saved!' : 'Save profile'}
-        </button>
+        {error && (
+          <div style={{ background: 'var(--danger-dim)', border: '1px solid var(--danger)', borderRadius: 'var(--radius)', padding: '10px 14px', color: 'var(--text)', fontSize: 13 }}>
+            {error}
+          </div>
+        )}
 
-        <span style={{ marginLeft: '1rem' }}>
-          <Link to={`/devices/${id}/recommendation`}>View recommendations →</Link>
-        </span>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <button type="submit" className="btn btn-primary" disabled={saving}>
+            {saving ? 'Saving…' : saved ? 'Saved!' : 'Save profile'}
+          </button>
+          <Link to={`/devices/${id}/recommendation`} style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--accent)' }}>
+            View recommendations →
+          </Link>
+        </div>
       </form>
     </div>
   );
