@@ -6,6 +6,29 @@ const CONDITIONS = ['new', 'used', 'unknown'] as const;
 
 const EMPTY_FORM = { part_type: '', model: '', spec_json: '', condition: 'unknown' as string, location: '', acquired_at: '', notes: '' };
 
+const fieldLabel: React.CSSProperties = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: 11,
+  fontWeight: 600,
+  letterSpacing: '0.08em',
+  textTransform: 'uppercase',
+  color: 'var(--text-faint)',
+  display: 'block',
+  marginBottom: 5,
+};
+
+const selectStyle: React.CSSProperties = {
+  display: 'block',
+  width: '100%',
+  background: 'var(--panel-raised)',
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--radius)',
+  color: 'var(--text)',
+  padding: '9px 12px',
+  fontFamily: 'var(--font-body)',
+  fontSize: 14,
+};
+
 export default function SpareParts() {
   const [parts, setParts] = useState<SparePart[]>([]);
   const [error, setError] = useState('');
@@ -64,97 +87,143 @@ export default function SpareParts() {
     }
   }
 
+  const TH_STYLE: React.CSSProperties = {
+    textAlign: 'left',
+    fontFamily: 'var(--font-mono)',
+    fontSize: 11,
+    fontWeight: 600,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    color: 'var(--text-faint)',
+    padding: '0 12px 10px',
+    borderBottom: '1px solid var(--border)',
+  };
+
+  const TD_STYLE: React.CSSProperties = {
+    padding: '10px 12px',
+    borderBottom: '1px solid var(--border-soft)',
+    fontSize: 13,
+    color: 'var(--text-muted)',
+  };
+
   return (
-    <div style={{ padding: '1.5rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h2 style={{ margin: 0 }}>Spare Parts</h2>
-        <button onClick={openCreate}>+ Add part</button>
+    <div style={{ padding: '32px 40px', maxWidth: 1100 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 24 }}>
+        <div>
+          <div className="eyebrow" style={{ marginBottom: 6 }}>Inventory</div>
+          <h1 style={{ fontFamily: 'var(--font-mono)', fontSize: 22, margin: 0, fontWeight: 600 }}>Spare Parts</h1>
+        </div>
+        <button onClick={openCreate} className="btn btn-primary">+ Add part</button>
       </div>
 
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {error && (
+        <div style={{ background: 'var(--danger-dim)', border: '1px solid var(--danger)', borderRadius: 'var(--radius)', padding: '10px 14px', color: 'var(--text)', fontSize: 13, marginBottom: 16 }}>
+          {error}
+        </div>
+      )}
 
-      {parts.length === 0 && <p style={{ fontStyle: 'italic', color: '#888' }}>No spare parts recorded yet.</p>}
+      {parts.length === 0 && (
+        <div style={{ border: '1px dashed var(--border)', borderRadius: 'var(--radius)', padding: '40px 24px', textAlign: 'center', color: 'var(--text-muted)' }}>
+          <p style={{ margin: 0, fontFamily: 'var(--font-mono)', color: 'var(--text)' }}>No spare parts recorded</p>
+          <p style={{ margin: '8px 0 0', fontSize: 13 }}>Add parts you have on hand to track your inventory.</p>
+        </div>
+      )}
 
       {parts.length > 0 && (
-        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-          <thead>
-            <tr>
-              {['Type', 'Model', 'Spec', 'Condition', 'Location', 'Acquired', ''].map(h => (
-                <th key={h} style={{ textAlign: 'left', borderBottom: '1px solid #ddd', padding: '0.5rem' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {parts.map(p => (
-              <tr key={p.id}>
-                <td style={{ padding: '0.5rem', borderBottom: '1px solid #eee' }}>{p.part_type}</td>
-                <td style={{ padding: '0.5rem', borderBottom: '1px solid #eee' }}>{p.model ?? '—'}</td>
-                <td style={{ padding: '0.5rem', borderBottom: '1px solid #eee', fontSize: '0.85rem', color: '#555' }}>{p.spec_json ?? '—'}</td>
-                <td style={{ padding: '0.5rem', borderBottom: '1px solid #eee' }}>{p.condition ?? '—'}</td>
-                <td style={{ padding: '0.5rem', borderBottom: '1px solid #eee' }}>{p.location ?? '—'}</td>
-                <td style={{ padding: '0.5rem', borderBottom: '1px solid #eee' }}>{p.acquired_at ?? '—'}</td>
-                <td style={{ padding: '0.5rem', borderBottom: '1px solid #eee', display: 'flex', gap: '0.5rem' }}>
-                  <button onClick={() => openEdit(p)}>Edit</button>
-                  <button onClick={() => handleDelete(p.id)} style={{ color: 'red' }}>Delete</button>
-                </td>
+        <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+            <thead>
+              <tr>
+                {['Type', 'Model', 'Spec', 'Condition', 'Location', 'Acquired', ''].map(h => (
+                  <th key={h} style={TH_STYLE}>{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {parts.map(p => (
+                <tr key={p.id}>
+                  <td style={{ ...TD_STYLE, fontFamily: 'var(--font-mono)', color: 'var(--text)', fontSize: 12 }}>{p.part_type}</td>
+                  <td style={{ ...TD_STYLE, color: 'var(--text)' }}>{p.model ?? '—'}</td>
+                  <td style={{ ...TD_STYLE, color: 'var(--text-faint)' }}>{p.spec_json ?? '—'}</td>
+                  <td style={TD_STYLE}>{p.condition ?? '—'}</td>
+                  <td style={TD_STYLE}>{p.location ?? '—'}</td>
+                  <td style={{ ...TD_STYLE, fontFamily: 'var(--font-mono)', fontSize: 12 }}>{p.acquired_at ?? '—'}</td>
+                  <td style={{ ...TD_STYLE, display: 'flex', gap: 6 }}>
+                    <button className="btn" style={{ padding: '4px 10px', fontSize: 11 }} onClick={() => openEdit(p)}>Edit</button>
+                    <button className="btn" style={{ padding: '4px 10px', fontSize: 11, color: 'var(--danger)', borderColor: 'var(--danger-dim)' }} onClick={() => handleDelete(p.id)}>Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {modal && (
         <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+          position: 'fixed', inset: 0,
+          background: 'rgba(0,0,0,0.6)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
         }}>
-          <div style={{ background: '#fff', borderRadius: 8, padding: '2rem', minWidth: 400, maxWidth: 480 }}>
-            <h3 style={{ marginTop: 0 }}>{modal === 'create' ? 'Add spare part' : 'Edit spare part'}</h3>
-            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <label>
-                <span>Type *</span>
-                <select value={form.part_type} onChange={e => setForm(f => ({ ...f, part_type: e.target.value }))} required
-                  style={{ display: 'block', width: '100%', marginTop: '0.2rem' }}>
+          <div style={{
+            background: 'var(--panel)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius)',
+            padding: 28,
+            minWidth: 420,
+            maxWidth: 500,
+            width: '100%',
+          }}>
+            <div className="eyebrow" style={{ marginBottom: 16 }}>
+              {modal === 'create' ? 'Add spare part' : 'Edit spare part'}
+            </div>
+            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={fieldLabel}>Type *</label>
+                <select value={form.part_type} onChange={e => setForm(f => ({ ...f, part_type: e.target.value }))} required style={selectStyle}>
                   <option value="">— select —</option>
                   {PART_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
-              </label>
-              <label>
-                Model
+              </div>
+              <div>
+                <label style={fieldLabel}>Model</label>
                 <input value={form.model} onChange={e => setForm(f => ({ ...f, model: e.target.value }))}
-                  placeholder="e.g. Samsung 870 EVO 500GB" style={{ display: 'block', width: '100%', marginTop: '0.2rem', boxSizing: 'border-box' }} />
-              </label>
-              <label>
-                Spec (free text)
+                  placeholder="e.g. Samsung 870 EVO 500GB" />
+              </div>
+              <div>
+                <label style={fieldLabel}>Spec (free text)</label>
                 <input value={form.spec_json} onChange={e => setForm(f => ({ ...f, spec_json: e.target.value }))}
-                  placeholder="e.g. 16GB DDR4-3200, 2x8" style={{ display: 'block', width: '100%', marginTop: '0.2rem', boxSizing: 'border-box' }} />
-              </label>
-              <label>
-                Condition
-                <select value={form.condition} onChange={e => setForm(f => ({ ...f, condition: e.target.value }))}
-                  style={{ display: 'block', width: '100%', marginTop: '0.2rem' }}>
+                  placeholder="e.g. 16GB DDR4-3200, 2×8" />
+              </div>
+              <div>
+                <label style={fieldLabel}>Condition</label>
+                <select value={form.condition} onChange={e => setForm(f => ({ ...f, condition: e.target.value }))} style={selectStyle}>
                   {CONDITIONS.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
-              </label>
-              <label>
-                Location
+              </div>
+              <div>
+                <label style={fieldLabel}>Location</label>
                 <input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
-                  placeholder="e.g. shelf A3, box in garage" style={{ display: 'block', width: '100%', marginTop: '0.2rem', boxSizing: 'border-box' }} />
-              </label>
-              <label>
-                Acquired date
+                  placeholder="e.g. shelf A3, box in garage" />
+              </div>
+              <div>
+                <label style={fieldLabel}>Acquired date</label>
                 <input type="date" value={form.acquired_at} onChange={e => setForm(f => ({ ...f, acquired_at: e.target.value }))}
-                  style={{ display: 'block', marginTop: '0.2rem' }} />
-              </label>
-              <label>
-                Notes
+                  style={{ colorScheme: 'dark' }} />
+              </div>
+              <div>
+                <label style={fieldLabel}>Notes</label>
                 <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2}
-                  style={{ display: 'block', width: '100%', marginTop: '0.2rem', boxSizing: 'border-box' }} />
-              </label>
-              {error && <p style={{ color: 'red', margin: 0 }}>{error}</p>}
-              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-                <button type="button" onClick={() => setModal(null)}>Cancel</button>
-                <button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
+                  style={{ display: 'block', width: '100%', boxSizing: 'border-box', background: 'var(--panel-raised)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', color: 'var(--text)', padding: '9px 12px', fontFamily: 'var(--font-body)', fontSize: 14, resize: 'vertical' }} />
+              </div>
+              {error && (
+                <div style={{ background: 'var(--danger-dim)', border: '1px solid var(--danger)', borderRadius: 'var(--radius)', padding: '8px 12px', color: 'var(--text)', fontSize: 13 }}>
+                  {error}
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+                <button type="button" className="btn" onClick={() => setModal(null)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
               </div>
             </form>
           </div>
