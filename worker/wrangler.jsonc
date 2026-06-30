@@ -6,7 +6,11 @@
     {
       "binding": "DB",
       "database_name": "workstationwatch",
-      "database_id": "ff783fa5-4062-418b-88e7-2bb33ba2d5be"
+      "database_id": "ff783fa5-4062-418b-88e7-2bb33ba2d5be",
+      "migrations_dir": "../migrations"
     }
-  ]
+  ],
+  "triggers": {
+    "crons": ["0 * * * *"]
+  }
 }
