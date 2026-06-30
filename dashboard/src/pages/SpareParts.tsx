@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { listSpares, createSpare, updateSpare, deleteSpare, type SparePart } from '../lib/api';
+import { listSpares, createSpare, updateSpare, deleteSpare, triggerSpareSync, type SparePart } from '../lib/api';
 
 const PART_TYPES = ['ram', 'gpu', 'cpu', 'psu', 'storage', 'motherboard', 'case', 'cooler', 'other'];
 const CONDITIONS = ['new', 'used', 'unknown'] as const;
@@ -29,12 +29,36 @@ const selectStyle: React.CSSProperties = {
   fontSize: 14,
 };
 
+function WhereCell({ part }: { part: SparePart }) {
+  if (part.device_id && part.device_name) {
+    return (
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text)' }}>
+        {part.device_name}
+      </span>
+    );
+  }
+  if (part.location) {
+    return <span style={{ color: 'var(--text-muted)' }}>{part.location}</span>;
+  }
+  return (
+    <span style={{
+      display: 'inline-block', padding: '2px 7px', borderRadius: 4,
+      background: 'var(--panel-raised)', fontSize: 11, color: 'var(--text-faint)',
+      fontFamily: 'var(--font-mono)', letterSpacing: '0.04em',
+    }}>
+      in stock
+    </span>
+  );
+}
+
 export default function SpareParts() {
   const [parts, setParts] = useState<SparePart[]>([]);
   const [error, setError] = useState('');
   const [modal, setModal] = useState<null | 'create' | SparePart>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState('');
 
   function load() {
     listSpares().then(r => setParts(r.parts)).catch(e => setError(e.message));
@@ -50,6 +74,21 @@ export default function SpareParts() {
       acquired_at: p.acquired_at ?? '', notes: p.notes ?? '',
     });
     setModal(p);
+  }
+
+  async function handleSync() {
+    setSyncing(true);
+    setSyncMsg('');
+    setError('');
+    try {
+      const r = await triggerSpareSync();
+      setSyncMsg(`Synced ${r.synced} components · ${r.inStocked} moved to stock`);
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Sync failed');
+    } finally {
+      setSyncing(false);
+    }
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -106,6 +145,8 @@ export default function SpareParts() {
     color: 'var(--text-muted)',
   };
 
+  const editingAuto = modal && typeof modal === 'object' && modal.source === 'auto';
+
   return (
     <div style={{ padding: '32px 40px', maxWidth: 1100 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 24 }}>
@@ -113,7 +154,15 @@ export default function SpareParts() {
           <div className="eyebrow" style={{ marginBottom: 6 }}>Inventory</div>
           <h1 style={{ fontFamily: 'var(--font-mono)', fontSize: 22, margin: 0, fontWeight: 600 }}>Spare Parts</h1>
         </div>
-        <button onClick={openCreate} className="btn btn-primary">+ Add part</button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {syncMsg && (
+            <span style={{ fontSize: 12, color: 'var(--text-faint)', fontFamily: 'var(--font-mono)' }}>{syncMsg}</span>
+          )}
+          <button onClick={handleSync} className="btn" disabled={syncing}>
+            {syncing ? 'Syncing…' : '⟳ Sync now'}
+          </button>
+          <button onClick={openCreate} className="btn btn-primary">+ Add part</button>
+        </div>
       </div>
 
       {error && (
@@ -125,7 +174,7 @@ export default function SpareParts() {
       {parts.length === 0 && (
         <div style={{ border: '1px dashed var(--border)', borderRadius: 'var(--radius)', padding: '40px 24px', textAlign: 'center', color: 'var(--text-muted)' }}>
           <p style={{ margin: 0, fontFamily: 'var(--font-mono)', color: 'var(--text)' }}>No spare parts recorded</p>
-          <p style={{ margin: '8px 0 0', fontSize: 13 }}>Add parts you have on hand to track your inventory.</p>
+          <p style={{ margin: '8px 0 0', fontSize: 13 }}>Click "Sync now" to import hardware from your devices, or add parts manually.</p>
         </div>
       )}
 
@@ -134,7 +183,7 @@ export default function SpareParts() {
           <table style={{ borderCollapse: 'collapse', width: '100%' }}>
             <thead>
               <tr>
-                {['Type', 'Model', 'Spec', 'Condition', 'Location', 'Acquired', ''].map(h => (
+                {['Type', 'Model', 'Where', 'Condition', 'Acquired', ''].map(h => (
                   <th key={h} style={TH_STYLE}>{h}</th>
                 ))}
               </tr>
@@ -142,11 +191,22 @@ export default function SpareParts() {
             <tbody>
               {parts.map(p => (
                 <tr key={p.id}>
-                  <td style={{ ...TD_STYLE, fontFamily: 'var(--font-mono)', color: 'var(--text)', fontSize: 12 }}>{p.part_type}</td>
-                  <td style={{ ...TD_STYLE, color: 'var(--text)' }}>{p.model ?? '—'}</td>
-                  <td style={{ ...TD_STYLE, color: 'var(--text-faint)' }}>{p.spec_json ?? '—'}</td>
+                  <td style={{ ...TD_STYLE, fontFamily: 'var(--font-mono)', color: 'var(--text)', fontSize: 12 }}>
+                    {p.part_type}
+                  </td>
+                  <td style={{ ...TD_STYLE, color: 'var(--text)' }}>
+                    {p.model ?? '—'}
+                    {p.source === 'auto' && (
+                      <span style={{
+                        display: 'inline-block', marginLeft: 7, padding: '1px 5px',
+                        borderRadius: 3, background: 'var(--panel-raised)',
+                        fontSize: 10, color: 'var(--text-faint)',
+                        fontFamily: 'var(--font-mono)', verticalAlign: 'middle',
+                      }}>auto</span>
+                    )}
+                  </td>
+                  <td style={TD_STYLE}><WhereCell part={p} /></td>
                   <td style={TD_STYLE}>{p.condition ?? '—'}</td>
-                  <td style={TD_STYLE}>{p.location ?? '—'}</td>
                   <td style={{ ...TD_STYLE, fontFamily: 'var(--font-mono)', fontSize: 12 }}>{p.acquired_at ?? '—'}</td>
                   <td style={{ ...TD_STYLE, display: 'flex', gap: 6 }}>
                     <button className="btn" style={{ padding: '4px 10px', fontSize: 11 }} onClick={() => openEdit(p)}>Edit</button>
@@ -174,13 +234,18 @@ export default function SpareParts() {
             maxWidth: 500,
             width: '100%',
           }}>
-            <div className="eyebrow" style={{ marginBottom: 16 }}>
+            <div className="eyebrow" style={{ marginBottom: editingAuto ? 8 : 16 }}>
               {modal === 'create' ? 'Add spare part' : 'Edit spare part'}
             </div>
+            {editingAuto && (
+              <p style={{ margin: '0 0 16px', fontSize: 12, color: 'var(--text-faint)', fontFamily: 'var(--font-mono)' }}>
+                Type, model and spec are managed by auto-sync. Condition, location and notes are yours to set.
+              </p>
+            )}
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label style={fieldLabel}>Type *</label>
-                <select value={form.part_type} onChange={e => setForm(f => ({ ...f, part_type: e.target.value }))} required style={selectStyle}>
+                <select value={form.part_type} onChange={e => setForm(f => ({ ...f, part_type: e.target.value }))} required style={selectStyle} disabled={!!editingAuto}>
                   <option value="">— select —</option>
                   {PART_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
@@ -188,12 +253,12 @@ export default function SpareParts() {
               <div>
                 <label style={fieldLabel}>Model</label>
                 <input value={form.model} onChange={e => setForm(f => ({ ...f, model: e.target.value }))}
-                  placeholder="e.g. Samsung 870 EVO 500GB" />
+                  placeholder="e.g. Samsung 870 EVO 500GB" disabled={!!editingAuto} />
               </div>
               <div>
                 <label style={fieldLabel}>Spec (free text)</label>
                 <input value={form.spec_json} onChange={e => setForm(f => ({ ...f, spec_json: e.target.value }))}
-                  placeholder="e.g. 16GB DDR4-3200, 2×8" />
+                  placeholder="e.g. 16GB DDR4-3200, 2×8" disabled={!!editingAuto} />
               </div>
               <div>
                 <label style={fieldLabel}>Condition</label>

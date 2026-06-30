@@ -1,3 +1,26 @@
+export interface DeviceWithHardware {
+  id: string;
+  name: string;
+  cpu_model: string | null;
+  cpu_cores: number | null;
+  cpu_threads: number | null;
+  ram_modules_json: string | null;
+  gpu_json: string | null;
+  motherboard_model: string | null;
+  bios_version: string | null;
+  storage_devices_json: string | null;
+  soldered_components: string | null;
+}
+
+export interface UpsertSpareParams {
+  fingerprint: string;
+  deviceId: string;
+  partType: string;
+  model: string;
+  specJson: string;
+  now: string;
+}
+
 // pcwatch tables — SELECT only. No INSERT/UPDATE/DELETE against these from pcfleet.
 // If you find yourself wanting to write to any of the tables below, stop —
 // that feature belongs in pcwatch, not here.
@@ -113,10 +136,71 @@ export function makeDb(rawDb: D1Database) {
     ).bind(deviceId, data.primary_use_cases, data.performance_expectation, data.usage_notes, now).run();
   }
 
+  async function listDevicesWithHardware(): Promise<DeviceWithHardware[]> {
+    const { results } = await rawDb.prepare(
+      `SELECT d.id, d.name,
+              h.cpu_model, h.cpu_cores, h.cpu_threads,
+              h.ram_modules_json, h.gpu_json, h.motherboard_model,
+              h.bios_version, h.storage_devices_json,
+              p.soldered_components
+       FROM devices d
+       LEFT JOIN hardware_inventory h ON h.device_id = d.id
+       LEFT JOIN fleet_user_profiles p ON p.device_id = d.id
+       WHERE d.status = 'active'`
+    ).all<DeviceWithHardware>();
+    return results;
+  }
+
+  async function upsertSpareByFingerprint(params: UpsertSpareParams): Promise<void> {
+    await rawDb.prepare(
+      `INSERT INTO fleet_spare_parts
+         (id, pcwatch_fingerprint, part_type, model, spec_json, source, device_id, last_seen_at, condition, created_at)
+       VALUES (?, ?, ?, ?, ?, 'auto', ?, ?, 'used', ?)
+       ON CONFLICT(pcwatch_fingerprint) DO UPDATE SET
+         part_type    = excluded.part_type,
+         model        = excluded.model,
+         spec_json    = excluded.spec_json,
+         device_id    = excluded.device_id,
+         last_seen_at = excluded.last_seen_at`
+    ).bind(
+      crypto.randomUUID(), params.fingerprint, params.partType,
+      params.model, params.specJson, params.deviceId, params.now, params.now,
+    ).run();
+  }
+
+  async function markAutoSparesInStock(seenFingerprints: string[], processedDeviceIds: string[]): Promise<number> {
+    if (processedDeviceIds.length === 0) return 0;
+
+    const placeholders = processedDeviceIds.map(() => '?').join(',');
+    const { results } = await rawDb.prepare(
+      `SELECT pcwatch_fingerprint FROM fleet_spare_parts
+       WHERE source = 'auto' AND device_id IS NOT NULL
+         AND device_id IN (${placeholders})`
+    ).bind(...processedDeviceIds).all<{ pcwatch_fingerprint: string }>();
+
+    const seenSet = new Set(seenFingerprints);
+    const toFree = results
+      .map(r => r.pcwatch_fingerprint)
+      .filter((fp): fp is string => !!fp && !seenSet.has(fp));
+
+    const now = new Date().toISOString();
+    for (const fp of toFree) {
+      await rawDb.prepare(
+        `UPDATE fleet_spare_parts SET device_id = NULL, last_seen_at = ? WHERE pcwatch_fingerprint = ?`
+      ).bind(now, fp).run();
+    }
+    return toFree.length;
+  }
+
   async function listSpares() {
     const { results } = await rawDb.prepare(
-      `SELECT id, part_type, model, spec_json, condition, location, acquired_at, notes, created_at
-       FROM fleet_spare_parts ORDER BY part_type, model`
+      `SELECT sp.id, sp.part_type, sp.model, sp.spec_json, sp.condition,
+              sp.location, sp.acquired_at, sp.notes, sp.created_at,
+              sp.device_id, sp.source, sp.last_seen_at,
+              d.name AS device_name
+       FROM fleet_spare_parts sp
+       LEFT JOIN devices d ON d.id = sp.device_id
+       ORDER BY sp.part_type, sp.model`
     ).all();
     return results;
   }
@@ -220,6 +304,7 @@ export function makeDb(rawDb: D1Database) {
     listDevices, getDevice, getHardware, getRecentMetrics, getLatestDiskMetrics,
     getAvStatus, getPendingUpdates,
     getProfile, upsertProfile,
+    listDevicesWithHardware, upsertSpareByFingerprint, markAutoSparesInStock,
     listSpares, createSpare, updateSpare, deleteSpare,
     listRecommendations, saveRecommendation,
     getUserByEmail, updateLastLogin, getUserById,

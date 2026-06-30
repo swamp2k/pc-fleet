@@ -1,8 +1,11 @@
 import { Router, json } from './router';
+import { authenticateDashboard } from './auth';
 import { makeAuthRoutes } from './routes/auth';
 import { makeProfileRoutes } from './routes/profiles';
 import { makeSparesRoutes } from './routes/spares';
 import { makeRecommendationRoutes } from './routes/recommendations';
+import { syncHardwareToSpares } from './sync';
+import { makeDb } from './db';
 
 export interface Env {
   DB: D1Database;
@@ -53,7 +56,18 @@ export default {
 
     router.get('/api/health', () => Promise.resolve(json({ ok: true })));
 
+    router.post('/api/spares/sync', async (req) => {
+      const session = await authenticateDashboard(req, env);
+      if (!session) return json({ error: 'unauthorized' }, 401);
+      const result = await syncHardwareToSpares(makeDb(env.DB));
+      return json(result);
+    });
+
     const response = await router.handle(request);
     return withCors(response);
+  },
+
+  async scheduled(_event: unknown, env: Env): Promise<void> {
+    await syncHardwareToSpares(makeDb(env.DB));
   },
 };

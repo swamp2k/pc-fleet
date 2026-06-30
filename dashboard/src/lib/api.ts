@@ -95,19 +95,27 @@ export interface SparePart {
   acquired_at: string | null;
   notes: string | null;
   created_at: string;
+  // auto-sync fields
+  device_id: string | null;
+  device_name: string | null;
+  source: string;       // 'manual' | 'auto'
+  last_seen_at: string | null;
 }
 
 export const listSpares = () =>
   request<{ parts: SparePart[] }>('GET', '/api/spares');
 
-export const createSpare = (data: Omit<SparePart, 'id' | 'created_at'>) =>
+export const createSpare = (data: Omit<SparePart, 'id' | 'created_at' | 'device_id' | 'device_name' | 'source' | 'last_seen_at'>) =>
   request<{ ok: boolean }>('POST', '/api/spares', data);
 
-export const updateSpare = (id: string, data: Partial<Omit<SparePart, 'id' | 'created_at'>>) =>
+export const updateSpare = (id: string, data: Partial<Omit<SparePart, 'id' | 'created_at' | 'device_id' | 'device_name' | 'source' | 'last_seen_at'>>) =>
   request<{ ok: boolean }>('PUT', `/api/spares/${id}`, data);
 
 export const deleteSpare = (id: string) =>
   request<{ ok: boolean }>('DELETE', `/api/spares/${id}`);
+
+export const triggerSpareSync = () =>
+  request<{ synced: number; inStocked: number }>('POST', '/api/spares/sync');
 
 // Recommendations
 export interface Recommendation {
