@@ -78,8 +78,21 @@ export async function syncHardwareToSpares(db: Db): Promise<SyncResult> {
 
     // ── RAM ──────────────────────────────────────────────────────────────────
     const ramModules = safeParse<RamModule>(device.ram_modules_json);
+    // Deduplicate by slot — if two sticks share the same slot label (or slot is
+    // blank) append :0, :1, ... so each gets a distinct fingerprint.
+    const ramSlotCount: Record<string, number> = {};
     for (const m of ramModules) {
-      const fp = `ram:${device.id}:${m.slot}`;
+      const slotKey = m.slot || '';
+      ramSlotCount[slotKey] = (ramSlotCount[slotKey] ?? 0) + 1;
+    }
+    const ramSlotIdx: Record<string, number> = {};
+    for (const m of ramModules) {
+      const slotKey = m.slot || '';
+      const idx = ramSlotIdx[slotKey] ?? 0;
+      ramSlotIdx[slotKey] = idx + 1;
+      const fp = ramSlotCount[slotKey] > 1
+        ? `ram:${device.id}:${slotKey}:${idx}`
+        : `ram:${device.id}:${slotKey}`;
       const specJson = JSON.stringify({
         slot: m.slot,
         capacity_gb: m.capacity_gb,
