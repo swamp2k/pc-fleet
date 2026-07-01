@@ -83,6 +83,121 @@ input:focus-visible {
   }
 }
 
+/* Shared page container padding — tighter on narrow viewports */
+.page {
+  padding: 32px 40px;
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding: 20px 16px;
+  }
+}
+
+@media (max-width: 420px) {
+  .page {
+    padding: 16px 12px;
+  }
+}
+
+/* Sidebar — off-canvas on narrow viewports */
+.sidebar {
+  transition: transform 0.2s ease;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+    z-index: 200;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
+  }
+}
+
+.shell-main {
+  margin-left: var(--sidebar-w);
+}
+
+@media (max-width: 768px) {
+  .shell-main {
+    margin-left: 0 !important;
+  }
+}
+
+.sidebar-backdrop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .sidebar-backdrop.open {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 150;
+  }
+}
+
+/* Mobile-only top bar with menu toggle */
+.topbar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 56px;
+    padding: 0 16px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 120;
+  }
+}
+
+.hamburger-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Horizontal scroll wrapper for wide tables on narrow viewports */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Two-column layout that stacks on narrow viewports */
+.two-col {
+  display: flex;
+  gap: 20px;
+}
+
+@media (max-width: 640px) {
+  .two-col {
+    flex-direction: column;
+  }
+
+  .two-col > aside {
+    min-width: 0 !important;
+    width: 100%;
+  }
+}
+
 /* Shared eyebrow/label style — terminal-rack label feel */
 .eyebrow {
   font-family: var(--font-mono);
@@ -132,7 +247,7 @@ input:focus-visible {
   color: var(--text-muted);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 7px 14px;
+  padding: 9px 14px;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
