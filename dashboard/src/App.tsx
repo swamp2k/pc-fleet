@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { isLoggedIn, clearToken } from './lib/auth';
 import Login from './pages/Login';
@@ -33,9 +34,10 @@ function NavLink({ to, label }: { to: string; label: string }) {
   );
 }
 
-function Sidebar() {
+function Sidebar({ open }: { open: boolean }) {
   return (
     <aside
+      className={`sidebar${open ? ' open' : ''}`}
       style={{
         width: 'var(--sidebar-w)',
         flexShrink: 0,
@@ -76,12 +78,43 @@ function Sidebar() {
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar />
-      <main style={{ marginLeft: 'var(--sidebar-w)', flex: 1, minWidth: 0 }}>
-        {children}
-      </main>
+      <div
+        className={`sidebar-backdrop${sidebarOpen ? ' open' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+      />
+      <Sidebar open={sidebarOpen} />
+      <div className="shell-main">
+        <div className="topbar">
+          <button
+            type="button"
+            className="btn hamburger-btn"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open navigation"
+            aria-expanded={sidebarOpen}
+          >
+            <span className="hamburger-lines" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </span>
+          </button>
+          <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 14, letterSpacing: '0.02em' }}>
+            PC FLEET
+          </span>
+        </div>
+        <main>
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

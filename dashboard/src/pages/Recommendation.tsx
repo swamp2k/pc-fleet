@@ -52,7 +52,7 @@ export default function RecommendationPage() {
   }
 
   if (error && recs.length === 0) return (
-    <div style={{ padding: '32px 40px' }}>
+    <div className="page">
       <div style={{ background: 'var(--danger-dim)', border: '1px solid var(--danger)', borderRadius: 'var(--radius)', padding: '12px 16px', color: 'var(--text)', fontSize: 13 }}>
         Error: {error}
       </div>
@@ -60,7 +60,7 @@ export default function RecommendationPage() {
   );
 
   return (
-    <div style={{ padding: '32px 40px', maxWidth: 860 }}>
+    <div className="page" style={{ maxWidth: 860 }}>
       <div style={{ marginBottom: 20, display: 'flex', gap: 16, alignItems: 'center' }}>
         <Link to={`/devices/${id}/profile`} style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-muted)' }}>
           ← Profile
@@ -98,7 +98,7 @@ export default function RecommendationPage() {
       )}
 
       {recs.length > 0 && (
-        <div style={{ display: 'flex', gap: 20 }}>
+        <div className="two-col">
           {recs.length > 1 && (
             <aside style={{ minWidth: 180, flexShrink: 0 }}>
               <div className="eyebrow" style={{ marginBottom: 10 }}>History</div>

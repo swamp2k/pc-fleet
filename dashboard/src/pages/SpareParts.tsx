@@ -148,7 +148,7 @@ export default function SpareParts() {
   const editingAuto = modal && typeof modal === 'object' && modal.source === 'auto';
 
   return (
-    <div style={{ padding: '32px 40px', maxWidth: 1100 }}>
+    <div className="page" style={{ maxWidth: 1100 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 24 }}>
         <div>
           <div className="eyebrow" style={{ marginBottom: 6 }}>Inventory</div>
@@ -180,15 +180,16 @@ export default function SpareParts() {
 
       {parts.length > 0 && (
         <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-            <thead>
-              <tr>
-                {['Type', 'Model', 'Where', 'Condition', 'Acquired', ''].map(h => (
-                  <th key={h} style={TH_STYLE}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
+          <div className="table-scroll">
+            <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+              <thead>
+                <tr>
+                  {['Type', 'Model', 'Where', 'Condition', 'Acquired', ''].map(h => (
+                    <th key={h} style={TH_STYLE}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
               {parts.map(p => (
                 <tr key={p.id}>
                   <td style={{ ...TD_STYLE, fontFamily: 'var(--font-mono)', color: 'var(--text)', fontSize: 12 }}>
@@ -209,13 +210,14 @@ export default function SpareParts() {
                   <td style={TD_STYLE}>{p.condition ?? '—'}</td>
                   <td style={{ ...TD_STYLE, fontFamily: 'var(--font-mono)', fontSize: 12 }}>{p.acquired_at ?? '—'}</td>
                   <td style={{ ...TD_STYLE, display: 'flex', gap: 6 }}>
-                    <button className="btn" style={{ padding: '4px 10px', fontSize: 11 }} onClick={() => openEdit(p)}>Edit</button>
-                    <button className="btn" style={{ padding: '4px 10px', fontSize: 11, color: 'var(--danger)', borderColor: 'var(--danger-dim)' }} onClick={() => handleDelete(p.id)}>Delete</button>
+                    <button className="btn" style={{ padding: '6px 10px', fontSize: 12 }} onClick={() => openEdit(p)}>Edit</button>
+                    <button className="btn" style={{ padding: '6px 10px', fontSize: 12, color: 'var(--danger)', borderColor: 'var(--danger-dim)' }} onClick={() => handleDelete(p.id)}>Delete</button>
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -224,13 +226,14 @@ export default function SpareParts() {
           position: 'fixed', inset: 0,
           background: 'rgba(0,0,0,0.6)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
+          padding: 16,
         }}>
           <div style={{
             background: 'var(--panel)',
             border: '1px solid var(--border)',
             borderRadius: 'var(--radius)',
             padding: 28,
-            minWidth: 420,
+            minWidth: 'min(420px, 100%)',
             maxWidth: 500,
             width: '100%',
           }}>
