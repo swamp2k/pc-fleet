@@ -66,7 +66,7 @@ export default function DeviceProfile() {
   }
 
   if (error) return (
-    <div style={{ padding: '32px 40px' }}>
+    <div className="page">
       <div style={{ background: 'var(--danger-dim)', border: '1px solid var(--danger)', borderRadius: 'var(--radius)', padding: '12px 16px', color: 'var(--text)', fontSize: 13 }}>
         Error: {error}
       </div>
@@ -74,7 +74,7 @@ export default function DeviceProfile() {
   );
 
   if (!device) return (
-    <div style={{ padding: '32px 40px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 13 }}>
+    <div className="page" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 13 }}>
       Loading…
     </div>
   );
@@ -85,7 +85,7 @@ export default function DeviceProfile() {
   })();
 
   return (
-    <div style={{ padding: '32px 40px', maxWidth: 700 }}>
+    <div className="page" style={{ maxWidth: 700 }}>
       <div style={{ marginBottom: 20 }}>
         <Link to="/devices" style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-muted)' }}>
           ← All devices

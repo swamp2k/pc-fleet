@@ -87,7 +87,7 @@ export default function DeviceList() {
   }, []);
 
   return (
-    <div style={{ padding: '32px 40px', maxWidth: 1100 }}>
+    <div className="page" style={{ maxWidth: 1100 }}>
       <div style={{ marginBottom: 24 }}>
         <div className="eyebrow" style={{ marginBottom: 6 }}>Fleet</div>
         <h1 style={{ fontFamily: 'var(--font-mono)', fontSize: 22, margin: 0, fontWeight: 600 }}>Devices</h1>
