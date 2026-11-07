@@ -4,26 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  changes:
-    runs-on: ubuntu-latest
-    outputs:
-      worker: ${{ steps.filter.outputs.worker }}
-      dashboard: ${{ steps.filter.outputs.dashboard }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            worker:
-              - 'worker/**'
-              - 'migrations/**'
-            dashboard:
-              - 'dashboard/**'
-
   deploy-worker:
-    needs: changes
-    if: needs.changes.outputs.worker == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -41,8 +22,6 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
   deploy-dashboard:
-    needs: changes
-    if: needs.changes.outputs.dashboard == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
