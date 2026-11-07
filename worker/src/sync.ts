@@ -20,7 +20,19 @@ interface StorageDevice {
 
 export interface SyncResult {
   synced: number;
-  inStocked: number;
+}
+
+// Things PCWatch reports as hardware but that are not swappable PC parts:
+// virtual/remote display adapters and USB sticks / card readers.
+export function isIgnoredPart(partType: string, model: string | null): boolean {
+  if (!model) return false;
+  if (partType === 'gpu') {
+    return /virtual|remote display|basic (display|render)|indirect|sudomaker|parsec|displaylink/i.test(model);
+  }
+  if (partType === 'storage') {
+    return /\busb\b|datatraveler|cruzer|flash disk|flash drive|card ?reader/i.test(model);
+  }
+  return false;
 }
 
 // Returns true when the CPU is soldered to the board and should not appear as a
@@ -114,6 +126,7 @@ export async function syncHardwareToSpares(db: Db): Promise<SyncResult> {
     for (const g of gpus) gpuModelCount[g.model] = (gpuModelCount[g.model] ?? 0) + 1;
     const gpuModelIdx: Record<string, number> = {};
     for (const g of gpus) {
+      if (isIgnoredPart('gpu', g.model)) continue;
       const idx = gpuModelIdx[g.model] ?? 0;
       gpuModelIdx[g.model] = idx + 1;
       const fp = gpuModelCount[g.model] > 1
@@ -135,6 +148,7 @@ export async function syncHardwareToSpares(db: Db): Promise<SyncResult> {
     for (const s of storages) storageCount[storageKey(s)] = (storageCount[storageKey(s)] ?? 0) + 1;
     const storageIdx: Record<string, number> = {};
     for (const s of storages) {
+      if (isIgnoredPart('storage', s.model)) continue;
       const key = storageKey(s);
       const idx = storageIdx[key] ?? 0;
       storageIdx[key] = idx + 1;
@@ -194,6 +208,8 @@ export async function syncHardwareToSpares(db: Db): Promise<SyncResult> {
     }
   }
 
-  const inStocked = await db.markAutoSparesInStock(seenFingerprints, processedDeviceIds);
-  return { synced, inStocked };
+  // Parts that stop showing up in a PC's inventory are NOT freed automatically:
+  // PCWatch inventory is best-effort. They stay "installed" and the UI flags them as
+  // "not seen" until a human confirms they were removed.
+  return { synced };
 }

@@ -168,36 +168,12 @@ export function makeDb(rawDb: D1Database) {
     ).run();
   }
 
-  async function markAutoSparesInStock(seenFingerprints: string[], processedDeviceIds: string[]): Promise<number> {
-    if (processedDeviceIds.length === 0) return 0;
-
-    const placeholders = processedDeviceIds.map(() => '?').join(',');
-    const { results } = await rawDb.prepare(
-      `SELECT pcwatch_fingerprint FROM fleet_spare_parts
-       WHERE source = 'auto' AND device_id IS NOT NULL
-         AND device_id IN (${placeholders})`
-    ).bind(...processedDeviceIds).all<{ pcwatch_fingerprint: string }>();
-
-    const seenSet = new Set(seenFingerprints);
-    const toFree = results
-      .map(r => r.pcwatch_fingerprint)
-      .filter((fp): fp is string => !!fp && !seenSet.has(fp));
-
-    const now = new Date().toISOString();
-    for (const fp of toFree) {
-      await rawDb.prepare(
-        `UPDATE fleet_spare_parts SET device_id = NULL, last_seen_at = ? WHERE pcwatch_fingerprint = ?`
-      ).bind(now, fp).run();
-    }
-    return toFree.length;
-  }
-
   async function listSpares() {
     const { results } = await rawDb.prepare(
       `SELECT sp.id, sp.part_type, sp.model, sp.spec_json, sp.condition,
               sp.location, sp.acquired_at, sp.notes, sp.created_at,
-              sp.device_id, sp.source, sp.last_seen_at,
-              d.name AS device_name
+              sp.device_id, sp.source, sp.last_seen_at, sp.installed_in,
+              d.name AS device_name, d.status AS device_status
        FROM fleet_spare_parts sp
        LEFT JOIN devices d ON d.id = sp.device_id
        ORDER BY sp.part_type, sp.model`
@@ -205,20 +181,38 @@ export function makeDb(rawDb: D1Database) {
     return results;
   }
 
+  // Only parts that are physically on the shelf: not in a tracked PC, not in an untracked one.
+  async function listAvailableSpares() {
+    const { results } = await rawDb.prepare(
+      `SELECT part_type, model, spec_json, condition
+       FROM fleet_spare_parts
+       WHERE device_id IS NULL AND installed_in IS NULL
+       ORDER BY part_type, model`
+    ).all<{ part_type: string; model: string | null; spec_json: string | null; condition: string | null }>();
+    return results;
+  }
+
+  // Human confirmed the part was taken out of its machine -> it is now on the shelf.
+  async function releaseSpare(id: string) {
+    await rawDb.prepare(
+      `UPDATE fleet_spare_parts SET device_id = NULL, installed_in = NULL WHERE id = ?`
+    ).bind(id).run();
+  }
+
   async function createSpare(data: {
     id: string; part_type: string; model: string | null; spec_json: string | null;
-    condition: string | null; location: string | null; acquired_at: string | null; notes: string | null;
+    condition: string | null; location: string | null; installed_in: string | null; acquired_at: string | null; notes: string | null;
   }) {
     const now = new Date().toISOString();
     await rawDb.prepare(
-      `INSERT INTO fleet_spare_parts (id, part_type, model, spec_json, condition, location, acquired_at, notes, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(data.id, data.part_type, data.model, data.spec_json, data.condition, data.location, data.acquired_at, data.notes, now).run();
+      `INSERT INTO fleet_spare_parts (id, part_type, model, spec_json, condition, location, installed_in, acquired_at, notes, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(data.id, data.part_type, data.model, data.spec_json, data.condition, data.location, data.installed_in, data.acquired_at, data.notes, now).run();
   }
 
   async function updateSpare(id: string, data: {
     part_type?: string; model?: string | null; spec_json?: string | null;
-    condition?: string | null; location?: string | null; acquired_at?: string | null; notes?: string | null;
+    condition?: string | null; location?: string | null; installed_in?: string | null; acquired_at?: string | null; notes?: string | null;
   }) {
     await rawDb.prepare(
       `UPDATE fleet_spare_parts SET
@@ -227,12 +221,13 @@ export function makeDb(rawDb: D1Database) {
          spec_json  = ?,
          condition  = ?,
          location   = ?,
+         installed_in = ?,
          acquired_at = ?,
          notes      = ?
        WHERE id = ?`
     ).bind(
       data.part_type ?? null, data.model ?? null, data.spec_json ?? null,
-      data.condition ?? null, data.location ?? null, data.acquired_at ?? null,
+      data.condition ?? null, data.location ?? null, data.installed_in ?? null, data.acquired_at ?? null,
       data.notes ?? null, id,
     ).run();
   }
@@ -304,8 +299,8 @@ export function makeDb(rawDb: D1Database) {
     listDevices, getDevice, getHardware, getRecentMetrics, getLatestDiskMetrics,
     getAvStatus, getPendingUpdates,
     getProfile, upsertProfile,
-    listDevicesWithHardware, upsertSpareByFingerprint, markAutoSparesInStock,
-    listSpares, createSpare, updateSpare, deleteSpare,
+    listDevicesWithHardware, upsertSpareByFingerprint,
+    listSpares, listAvailableSpares, releaseSpare, createSpare, updateSpare, deleteSpare,
     listRecommendations, saveRecommendation,
     getUserByEmail, updateLastLogin, getUserById,
     insertMagicLink, getMagicLink, consumeMagicLink,

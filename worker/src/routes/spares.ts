@@ -22,7 +22,7 @@ export function makeSparesRoutes(env: Env) {
 
     let body: {
       part_type?: string; model?: string; spec_json?: string;
-      condition?: string; location?: string; acquired_at?: string; notes?: string;
+      condition?: string; location?: string; installed_in?: string; acquired_at?: string; notes?: string;
     };
     try { body = await request.json(); } catch { return json({ error: 'invalid json' }, 400); }
     if (!body.part_type) return json({ error: 'part_type is required' }, 400);
@@ -39,6 +39,7 @@ export function makeSparesRoutes(env: Env) {
       spec_json: body.spec_json ?? null,
       condition,
       location: body.location ?? null,
+      installed_in: body.installed_in ?? null,
       acquired_at: body.acquired_at ?? null,
       notes: body.notes ?? null,
     });
@@ -52,7 +53,7 @@ export function makeSparesRoutes(env: Env) {
 
     let body: {
       part_type?: string; model?: string | null; spec_json?: string | null;
-      condition?: string | null; location?: string | null; acquired_at?: string | null; notes?: string | null;
+      condition?: string | null; location?: string | null; installed_in?: string | null; acquired_at?: string | null; notes?: string | null;
     };
     try { body = await request.json(); } catch { return json({ error: 'invalid json' }, 400); }
 
@@ -72,5 +73,13 @@ export function makeSparesRoutes(env: Env) {
     return json({ ok: true });
   }
 
-  return { list, create, update, remove };
+  async function release(request: Request, params: Record<string, string>): Promise<Response> {
+    const auth = await authenticateDashboard(request, env);
+    if (!auth) return json({ error: 'unauthorized' }, 401);
+
+    await db.releaseSpare(params.id);
+    return json({ ok: true });
+  }
+
+  return { list, create, update, remove, release };
 }

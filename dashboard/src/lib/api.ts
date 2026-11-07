@@ -98,6 +98,8 @@ export interface SparePart {
   // auto-sync fields
   device_id: string | null;
   device_name: string | null;
+  device_status: string | null;  // 'active' | 'retired' | ...
+  installed_in: string | null;   // machine PCWatch doesn't track, e.g. 'Unraid server'
   source: string;       // 'manual' | 'auto'
   last_seen_at: string | null;
 }
@@ -105,17 +107,20 @@ export interface SparePart {
 export const listSpares = () =>
   request<{ parts: SparePart[] }>('GET', '/api/spares');
 
-export const createSpare = (data: Omit<SparePart, 'id' | 'created_at' | 'device_id' | 'device_name' | 'source' | 'last_seen_at'>) =>
+export const createSpare = (data: Omit<SparePart, 'id' | 'created_at' | 'device_id' | 'device_name' | 'device_status' | 'source' | 'last_seen_at'>) =>
   request<{ ok: boolean }>('POST', '/api/spares', data);
 
-export const updateSpare = (id: string, data: Partial<Omit<SparePart, 'id' | 'created_at' | 'device_id' | 'device_name' | 'source' | 'last_seen_at'>>) =>
+export const updateSpare = (id: string, data: Partial<Omit<SparePart, 'id' | 'created_at' | 'device_id' | 'device_name' | 'device_status' | 'source' | 'last_seen_at'>>) =>
   request<{ ok: boolean }>('PUT', `/api/spares/${id}`, data);
 
 export const deleteSpare = (id: string) =>
   request<{ ok: boolean }>('DELETE', `/api/spares/${id}`);
 
+export const releaseSpare = (id: string) =>
+  request<{ ok: boolean }>('POST', `/api/spares/${id}/release`);
+
 export const triggerSpareSync = () =>
-  request<{ synced: number; inStocked: number }>('POST', '/api/spares/sync');
+  request<{ synced: number }>('POST', '/api/spares/sync');
 
 // Recommendations
 export interface Recommendation {

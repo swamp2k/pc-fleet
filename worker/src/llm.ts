@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { isIgnoredPart } from './sync';
 import type { Db } from './db';
 
 const MODEL = 'claude-sonnet-4-6';
@@ -28,7 +29,7 @@ export async function buildPromptInput(db: Db, deviceId: string): Promise<Prompt
       db.getAvStatus(deviceId),
       db.getPendingUpdates(deviceId),
       db.getProfile(deviceId),
-      db.listSpares(),
+      db.listAvailableSpares(),
     ]);
 
   if (!device) throw new Error('device not found');
@@ -45,7 +46,7 @@ export async function buildPromptInput(db: Db, deviceId: string): Promise<Prompt
       performance_expectation: profile.performance_expectation,
       usage_notes: profile.usage_notes,
     } : null,
-    spareParts,
+    spareParts: spareParts.filter(sp => !isIgnoredPart(sp.part_type, sp.model)),
   };
 }
 

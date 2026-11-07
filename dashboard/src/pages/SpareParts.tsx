@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { listSpares, createSpare, updateSpare, deleteSpare, triggerSpareSync, type SparePart } from '../lib/api';
+import { listSpares, createSpare, updateSpare, deleteSpare, triggerSpareSync, releaseSpare, type SparePart } from '../lib/api';
 
 const PART_TYPES = ['ram', 'gpu', 'cpu', 'psu', 'storage', 'motherboard', 'case', 'cooler', 'other'];
 const CONDITIONS = ['new', 'used', 'unknown'] as const;
 
-const EMPTY_FORM = { part_type: '', model: '', spec_json: '', condition: 'unknown' as string, location: '', acquired_at: '', notes: '' };
+const EMPTY_FORM = { part_type: '', model: '', spec_json: '', condition: 'unknown' as string, location: '', installed_in: '', acquired_at: '', notes: '' };
 
 const fieldLabel: React.CSSProperties = {
   fontFamily: 'var(--font-mono)',
@@ -29,13 +29,37 @@ const selectStyle: React.CSSProperties = {
   fontSize: 14,
 };
 
+// PCWatch syncs hourly, so a part on an active PC not seen for 3h is "missing".
+const NOT_SEEN_MS = 3 * 60 * 60 * 1000;
+
+// Auto parts we can't vouch for: on a retired PC, or gone from an active PC's inventory.
+function checkReason(p: SparePart): string | null {
+  if (!p.device_id) return null;
+  if (p.device_status === 'retired') return 'machine is retired';
+  if (p.source === 'auto' && p.last_seen_at && Date.now() - new Date(p.last_seen_at).getTime() > NOT_SEEN_MS) {
+    return `not seen since ${p.last_seen_at.slice(0, 10)}`;
+  }
+  return null;
+}
+
+const CHECK_BADGE: React.CSSProperties = {
+  display: 'inline-block', marginLeft: 7, padding: '2px 7px', borderRadius: 4,
+  background: 'var(--panel-raised)', fontSize: 11, color: 'var(--warn, #d9a441)',
+  fontFamily: 'var(--font-mono)', letterSpacing: '0.04em',
+};
+
 function WhereCell({ part }: { part: SparePart }) {
   if (part.device_id && part.device_name) {
+    const reason = checkReason(part);
     return (
       <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text)' }}>
         {part.device_name}
+        {reason && <span style={CHECK_BADGE}>check: {reason}</span>}
       </span>
     );
+  }
+  if (part.installed_in) {
+    return <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text)' }}>in use: {part.installed_in}</span>;
   }
   if (part.location) {
     return <span style={{ color: 'var(--text-muted)' }}>{part.location}</span>;
@@ -70,7 +94,7 @@ export default function SpareParts() {
   function openEdit(p: SparePart) {
     setForm({
       part_type: p.part_type, model: p.model ?? '', spec_json: p.spec_json ?? '',
-      condition: p.condition ?? 'unknown', location: p.location ?? '',
+      condition: p.condition ?? 'unknown', location: p.location ?? '', installed_in: p.installed_in ?? '',
       acquired_at: p.acquired_at ?? '', notes: p.notes ?? '',
     });
     setModal(p);
@@ -82,7 +106,7 @@ export default function SpareParts() {
     setError('');
     try {
       const r = await triggerSpareSync();
-      setSyncMsg(`Synced ${r.synced} components · ${r.inStocked} moved to stock`);
+      setSyncMsg(`Synced ${r.synced} components`);
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sync failed');
@@ -100,6 +124,7 @@ export default function SpareParts() {
       const payload = {
         part_type: form.part_type, model: form.model || null, spec_json: form.spec_json || null,
         condition: form.condition || null, location: form.location || null,
+        installed_in: form.installed_in || null,
         acquired_at: form.acquired_at || null, notes: form.notes || null,
       };
       if (modal === 'create') {
@@ -113,6 +138,16 @@ export default function SpareParts() {
       setError(err instanceof Error ? err.message : 'Save failed');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleRelease(id: string) {
+    if (!confirm('Confirm this part has been taken out and is now on the shelf?')) return;
+    try {
+      await releaseSpare(id);
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Update failed');
     }
   }
 
@@ -210,6 +245,9 @@ export default function SpareParts() {
                     <td style={TD_STYLE}>{p.condition ?? '—'}</td>
                     <td style={{ ...TD_STYLE, fontFamily: 'var(--font-mono)', fontSize: 12 }}>{p.acquired_at ?? '—'}</td>
                     <td style={{ ...TD_STYLE, display: 'flex', gap: 6 }}>
+                      {checkReason(p) && (
+                        <button className="btn" style={{ padding: '6px 10px', fontSize: 12 }} onClick={() => handleRelease(p.id)}>Now in stock</button>
+                      )}
                       <button className="btn" style={{ padding: '6px 10px', fontSize: 12 }} onClick={() => openEdit(p)}>Edit</button>
                       <button className="btn" style={{ padding: '6px 10px', fontSize: 12, color: 'var(--danger)', borderColor: 'var(--danger-dim)' }} onClick={() => handleDelete(p.id)}>Delete</button>
                     </td>
@@ -273,6 +311,11 @@ export default function SpareParts() {
                 <label style={fieldLabel}>Location</label>
                 <input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
                   placeholder="e.g. shelf A3, box in garage" />
+              </div>
+              <div>
+                <label style={fieldLabel}>In use in (untracked machine)</label>
+                <input value={form.installed_in} onChange={e => setForm(f => ({ ...f, installed_in: e.target.value }))}
+                  placeholder="e.g. Unraid server — leave empty if it's on the shelf" />
               </div>
               <div>
                 <label style={fieldLabel}>Acquired date</label>

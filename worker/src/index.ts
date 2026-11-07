@@ -50,6 +50,7 @@ export default {
     router.post('/api/spares', req => spares.create(req));
     router.put('/api/spares/:id', (req, p) => spares.update(req, p));
     router.delete('/api/spares/:id', (req, p) => spares.remove(req, p));
+    router.post('/api/spares/:id/release', (req, p) => spares.release(req, p));
 
     router.get('/api/devices/:id/recommendations', (req, p) => recs.list(req, p));
     router.post('/api/devices/:id/recommendations/generate', (req, p) => recs.generate(req, p));
